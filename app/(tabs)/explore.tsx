@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Word } from '@/types/wordTypes'; // Ajusta la ruta según tu estructura
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { Alert } from 'react-native';
 
 export default function ExploreScreen() {
   const [learnedWords, setLearnedWords] = useState([]);
@@ -42,10 +43,32 @@ export default function ExploreScreen() {
   };
   
 
-  const clearLearnedWords = async () => {
-    await AsyncStorage.removeItem('learnedWords');
-    setLearnedWords([]); // o como se llame tu estado
+  // const clearLearnedWords = async () => {
+  //   await AsyncStorage.removeItem('learnedWords');
+  //   setLearnedWords([]); // o como se llame tu estado
+  // };
+  const clearLearnedWords = () => {
+    Alert.alert(
+      '¿Estás segura/o?',
+      'Esto eliminará todas las palabras aprendidas. ¿Deseas continuar?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Sí, vaciar',
+          onPress: async () => {
+            await AsyncStorage.removeItem('learnedWords');
+            setLearnedWords([]);
+          },
+          style: 'destructive',
+        },
+      ],
+      { cancelable: true }
+    );
   };
+  
   
 
   return (
