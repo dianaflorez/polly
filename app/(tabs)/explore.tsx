@@ -1,109 +1,127 @@
-import { StyleSheet, Image, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Button, Image, Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
+import PollyCard from '@/components/PollyCard';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { ThemedText } from '@/components/ThemedText';
+import { Word } from '@/types/wordTypes'; // Ajusta la ruta según tu estructura
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
-export default function TabTwoScreen() {
+export default function ExploreScreen() {
+  const [learnedWords, setLearnedWords] = useState([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchLearnedWords = async () => {
+        const stored = await AsyncStorage.getItem('learnedWords');
+        if (stored) {
+          const parsed: Word[] = JSON.parse(stored);
+          // Mostrar del más nuevo al más antiguo
+          // setLearnedWords(parsed.reverse());
+          setLearnedWords(parsed);
+        }
+      };
+      fetchLearnedWords();
+    }, [])
+  );
+  
+
+  // const removeWord = async (wordToRemove: Word) => {
+  //   const updated = learnedWords.filter(w => w.id !== wordToRemove.id);
+  //   await AsyncStorage.setItem('learnedWords', JSON.stringify(updated));
+  //   setLearnedWords(updated);
+  // };
+
+  const removeWord = async (wordToRemove: Word) => {
+    const updated = learnedWords.filter(w => w.id !== wordToRemove.id);
+    await AsyncStorage.setItem('learnedWords', JSON.stringify(updated));
+    setLearnedWords([...updated].reverse());
+  };
+  
+
+  const clearLearnedWords = async () => {
+    await AsyncStorage.removeItem('learnedWords');
+    setLearnedWords([]); // o como se llame tu estado
+  };
+  
+
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+      headerBackgroundColor={{ light: '#ACE', dark: '#234' }}
       headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
+        <Image
+          source={require('@/assets/images/partial-react-logo.png')}
+          style={styles.reactLogo}
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
+        <ThemedText type="title">Explorar Aprendidas</ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user's current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
+      <ThemedView style={styles.titleContainer}>
+        <Button title="Vaciar palabras aprendidas" onPress={clearLearnedWords} />
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        
+        {learnedWords.length === 0 ? (
+          <Text style={styles.empty}>No has aprendido palabras aún.</Text>
+        ) : (
+          learnedWords.map(word => (
+            <PollyCard
+              key={word.id}
+              id={word.id}
+              spanish={word.translation}
+              english={word.name}
+              word={word}
+  
+              onRemove={() => removeWord(word)}
+              mode="explore"
+            />
+          ))
+        )}
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
   titleContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+  },
+  stepContainer: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  reactLogo: {
+    height: 78,
+    width: 290,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+  },
+  clearButton: {
+    backgroundColor: '#cc0000',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  clearText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 20,
+  },
+  empty: {
+    marginTop: 40,
+    fontSize: 16,
+    color: '#777',
   },
 });

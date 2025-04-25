@@ -1,56 +1,105 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import {
+  FlatList,
+  Image,
+  StyleSheet,
+  View,
+  ListRenderItem,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { words } from '@/data/words';
 
 import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import PollyCard from '@/components/PollyCard';
+
+type Word = {
+  id: string;
+  name: string;
+  translation: string;
+  description: string;
+  image: string;
+};
+
+const LEVEL_SIZE = 5;
 
 export default function HomeScreen() {
+  const [visibleWords, setVisibleWords] = useState<Word[]>([]);
+  const [learnedWords, setLearnedWords] = useState<Word[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadState = async () => {
+        const stored = await AsyncStorage.getItem('learnedWords');
+        const learned = stored ? JSON.parse(stored) : [];
+
+        setLearnedWords(learned);
+        const filteredWords = words.filter(
+          (word) => !learned.find((w) => w.id === word.id)
+        );
+
+        setVisibleWords(filteredWords.slice(0, LEVEL_SIZE));
+        setCurrentIndex(LEVEL_SIZE);
+      };
+
+      loadState();
+    }, [])
+  );
+
+  const loadMoreWords = () => {
+    const nextBatch = words
+      .filter((word) => !learnedWords.find((w) => w.id === word.id))
+      .slice(currentIndex, currentIndex + LEVEL_SIZE);
+
+    setVisibleWords((prev) => [...prev, ...nextBatch]);
+    setCurrentIndex((prev) => prev + LEVEL_SIZE);
+  };
+
+  const markAsLearned = async (id: string) => {
+    const word = visibleWords.find((w) => w.id === id);
+    if (!word) return;
+
+    const updatedLearned = [...learnedWords, word];
+    await AsyncStorage.setItem('learnedWords', JSON.stringify(updatedLearned));
+    setLearnedWords(updatedLearned);
+    setVisibleWords((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const renderItem: ListRenderItem<Word> = ({ item }) => (
+    <PollyCard
+      key={item.id}
+      id={item.id}
+      spanish={item.translation}
+      english={item.name}
+      description={item.description}
+      onLearned={() => markAsLearned(item.id)}
+    />
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <FlatList
+      data={visibleWords}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id}
+      onEndReached={loadMoreWords}
+      onEndReachedThreshold={0.5}
+      ListHeaderComponent={
+        <>
+          <Image
+            source={require('@/assets/images/partial-react-logo.png')}
+            style={styles.reactLogo}
+          />
+          <ThemedView style={styles.titleContainer}>
+            <ThemedText type="title">Palabras por aprender</ThemedText>
+            <HelloWave />
+          </ThemedView>
+        </>
+      }
+      contentContainerStyle={styles.listContent}
+    />
   );
 }
 
@@ -59,16 +108,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+    paddingBottom: 16,
   },
   reactLogo: {
-    height: 178,
+    height: 78,
     width: 290,
     bottom: 0,
     left: 0,
-    position: 'absolute',
+    position: 'relative',
+    marginVertical: 10,
+    alignSelf: 'center',
+  },
+  listContent: {
+    padding: 16,
   },
 });
